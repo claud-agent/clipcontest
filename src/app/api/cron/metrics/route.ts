@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     tokenMap.get(token)!.push(entry)
   }
 
-  for (const [token, userEntries] of tokenMap) {
+  for (const [token, userEntries] of Array.from(tokenMap.entries())) {
     const videoIds = userEntries
       .map(e => e.platform_video_id)
       .filter((id): id is string => !!id)
