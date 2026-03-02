@@ -1,10 +1,17 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import ContestCard from '@/components/dashboard/ContestCard'
+import TikTokConnect from '@/components/dashboard/TikTokConnect'
 
 export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tiktok_username')
+    .eq('id', user!.id)
+    .single()
 
   const { data: contests } = await supabase
     .from('contests')
@@ -26,15 +33,18 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
           <p className="text-gray-400 text-sm mt-1">Verwalte deine Contests</p>
         </div>
-        <Link
-          href="/dashboard/contests/new"
-          className="flex items-center gap-2 px-4 py-2.5 bg-brand-500 hover:bg-brand-500/90 text-white font-semibold rounded-xl transition-colors text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Neuer Contest
-        </Link>
+        <div className="flex items-center gap-3">
+          <TikTokConnect tiktokUsername={profile?.tiktok_username ?? null} />
+          <Link
+            href="/dashboard/contests/new"
+            className="flex items-center gap-2 px-4 py-2.5 bg-brand-500 hover:bg-brand-500/90 text-white font-semibold rounded-xl transition-colors text-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Neuer Contest
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
