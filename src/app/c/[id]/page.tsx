@@ -18,7 +18,6 @@ export default async function PublicContestPage({ params }: { params: { id: stri
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Check TikTok connection
   let tiktokConnected = false
   if (user) {
     const { data: profile } = await supabase
@@ -29,7 +28,6 @@ export default async function PublicContestPage({ params }: { params: { id: stri
     tiktokConnected = !!profile?.tiktok_access_token
   }
 
-  // Check if user already submitted
   let hasSubmitted = false
   if (user) {
     const { data: existing } = await supabase
@@ -56,20 +54,20 @@ export default async function PublicContestPage({ params }: { params: { id: stri
     : null
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className="min-h-screen bg-[#0c0d0f]">
       {/* Header */}
-      <header className="border-b border-white/5 px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+      <header className="border-b border-white/[0.04] bg-[#0c0d0f]/80 backdrop-blur-xl">
+        <div className="max-w-2xl mx-auto flex items-center justify-between px-6 h-14">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+              <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
               </svg>
             </div>
-            <span className="font-bold text-white text-sm">ClipContest</span>
+            <span className="text-[15px] font-bold text-white">ClipContest</span>
           </Link>
           {!user && (
-            <Link href="/auth/login" className="text-sm text-gray-400 hover:text-white transition-colors">
+            <Link href="/auth/login" className="text-[13px] text-gray-400 hover:text-white transition-colors duration-200">
               Anmelden
             </Link>
           )}
@@ -77,25 +75,25 @@ export default async function PublicContestPage({ params }: { params: { id: stri
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-10">
-        {/* Status badge */}
-        <div className="flex items-center gap-3 mb-4">
-          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${
-            isActive ? 'text-green-400 bg-green-400/10 border-green-400/20' :
-            isEnded ? 'text-gray-400 bg-gray-400/10 border-gray-400/20' :
-            'text-yellow-400 bg-yellow-400/10 border-yellow-400/20'
+        {/* Status badges */}
+        <div className="flex items-center gap-2 mb-5">
+          <span className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border ${
+            isActive ? 'text-green-400 bg-green-400/[0.08] border-green-400/20' :
+            isEnded ? 'text-gray-400 bg-gray-400/[0.08] border-gray-400/20' :
+            'text-yellow-400 bg-yellow-400/[0.08] border-yellow-400/20'
           }`}>
-            {isActive ? '🟢 Aktiv' : isEnded ? '⚫ Beendet' : '⏳ Bald'}
+            {isActive ? 'Aktiv' : isEnded ? 'Beendet' : 'Bald'}
           </span>
-          <span className="text-gray-500 text-xs">🎵 TikTok</span>
+          <span className="text-gray-600 text-[11px]">TikTok</span>
           {daysLeft !== null && isActive && (
-            <span className="text-gray-500 text-xs">⏱ noch {daysLeft} Tag{daysLeft !== 1 ? 'e' : ''}</span>
+            <span className="text-gray-500 text-[11px]">noch {daysLeft} Tag{daysLeft !== 1 ? 'e' : ''}</span>
           )}
         </div>
 
         {/* Title */}
-        <h1 className="text-3xl font-bold text-white mb-2">{contest.title}</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">{contest.title}</h1>
         {contest.description && (
-          <p className="text-gray-400 mb-6">{contest.description}</p>
+          <p className="text-gray-400 text-[15px] mb-8 leading-relaxed">{contest.description}</p>
         )}
 
         {/* Prize cards */}
@@ -103,53 +101,45 @@ export default async function PublicContestPage({ params }: { params: { id: stri
           <div className={`grid gap-3 mb-8 ${prizeSplit.length === 1 ? 'grid-cols-1' : prizeSplit.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
             {prizeSplit.slice(0, contest.winner_count ?? 1).map((amount: number, i: number) => (
               <div key={i} className={`rounded-xl p-4 text-center border ${
-                i === 0 ? 'bg-yellow-400/10 border-yellow-400/20' :
-                i === 1 ? 'bg-gray-400/10 border-gray-400/20' :
-                'bg-orange-400/10 border-orange-400/20'
+                i === 0 ? 'bg-yellow-400/[0.06] border-yellow-400/15' :
+                i === 1 ? 'bg-white/[0.02] border-white/[0.06]' :
+                'bg-orange-400/[0.06] border-orange-400/15'
               }`}>
-                <div className="text-2xl mb-1">{['🥇','🥈','🥉'][i]}</div>
-                <div className={`text-xl font-bold ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : 'text-orange-400'}`}>
-                  €{amount}
+                <div className="text-xl mb-1">{['🥇','🥈','🥉'][i]}</div>
+                <div className={`text-lg font-bold ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : 'text-orange-400'}`}>
+                  &euro;{amount}
                 </div>
-                <div className="text-gray-500 text-xs">{i + 1}. Platz</div>
+                <div className="text-gray-600 text-[11px]">{i + 1}. Platz</div>
               </div>
             ))}
           </div>
         ) : totalPrize > 0 ? (
-          <div className="bg-yellow-400/10 border border-yellow-400/20 rounded-xl p-4 text-center mb-8">
-            <div className="text-3xl font-bold text-yellow-400">€{totalPrize}</div>
-            <div className="text-gray-400 text-sm">Gesamtpreisgeld</div>
+          <div className="bg-yellow-400/[0.06] border border-yellow-400/15 rounded-xl p-4 text-center mb-8">
+            <div className="text-2xl font-bold text-yellow-400">&euro;{totalPrize}</div>
+            <div className="text-gray-500 text-[13px]">Gesamtpreisgeld</div>
           </div>
         ) : null}
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-8">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
-            <div className="text-xl font-bold text-white">{entryCount ?? 0}</div>
-            <div className="text-gray-500 text-xs">Einreichungen</div>
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
-            <div className="text-xl font-bold text-white">
-              {contest.participation_hashtag ?? '#—'}
+          {[
+            { value: entryCount ?? 0, label: 'Einreichungen' },
+            { value: contest.participation_hashtag ?? '#—', label: 'Hashtag' },
+            { value: contest.end_date ? new Date(contest.end_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) : '—', label: 'Deadline' },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 text-center">
+              <div className="text-lg font-bold text-white">{stat.value}</div>
+              <div className="text-gray-600 text-[11px]">{stat.label}</div>
             </div>
-            <div className="text-gray-500 text-xs">Pflicht-Hashtag</div>
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
-            <div className="text-xl font-bold text-white">
-              {contest.end_date
-                ? new Date(contest.end_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
-                : '—'}
-            </div>
-            <div className="text-gray-500 text-xs">Deadline</div>
-          </div>
+          ))}
         </div>
 
         {/* Entry form */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
-          <h2 className="text-white font-bold text-lg mb-1">Jetzt teilnehmen</h2>
-          <p className="text-gray-400 text-sm mb-4">
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 mb-6">
+          <h2 className="text-white font-semibold text-[15px] mb-1">Jetzt teilnehmen</h2>
+          <p className="text-gray-500 text-[13px] mb-4">
             Erstelle dein Video auf TikTok mit {contest.participation_hashtag ?? 'dem Pflicht-Hashtag'}
-            {contest.participation_tag ? ` und tagge @${contest.participation_tag}` : ''}, dann reiche den Link hier ein.
+            {contest.participation_tag ? ` und tagge @${contest.participation_tag}` : ''}, dann wähle es hier aus.
           </p>
           <EntryForm
             contestId={contest.id}
@@ -162,15 +152,15 @@ export default async function PublicContestPage({ params }: { params: { id: stri
         </div>
 
         {/* Leaderboard */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 mb-6">
           <Leaderboard contestId={contest.id} />
         </div>
 
-        {/* Rules / Terms */}
+        {/* Terms */}
         {contest.terms && (
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-4">📋 Teilnahmebedingungen</h2>
-            <pre className="text-gray-400 text-xs whitespace-pre-wrap font-sans leading-relaxed">
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+            <h2 className="text-white font-semibold text-[15px] mb-4">Teilnahmebedingungen</h2>
+            <pre className="text-gray-500 text-[12px] whitespace-pre-wrap font-sans leading-relaxed">
               {contest.terms}
             </pre>
           </div>
