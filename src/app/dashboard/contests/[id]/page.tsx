@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import ContestActions from '@/components/dashboard/ContestActions'
+import CopyButton from '@/components/dashboard/CopyButton'
 
 const statusConfig = {
   draft: { label: 'Entwurf', color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20' },
@@ -88,12 +89,7 @@ export default async function ContestDetailPage({
           <code className="flex-1 text-brand-500 text-sm bg-black/20 px-3 py-2 rounded-lg truncate">
             {shareUrl}
           </code>
-          <button
-            onClick={() => navigator.clipboard?.writeText(shareUrl)}
-            className="px-3 py-2 bg-brand-500/20 hover:bg-brand-500/30 text-brand-500 rounded-lg text-xs font-medium transition-colors flex-shrink-0"
-          >
-            Kopieren
-          </button>
+          <CopyButton text={shareUrl} />
         </div>
       </div>
 
