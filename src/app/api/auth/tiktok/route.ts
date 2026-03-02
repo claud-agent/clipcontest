@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 
   const params = new URLSearchParams({
     client_key: clientKey,
-    scope: 'user.info.basic',
+    scope: 'user.info.basic,user.info.profile,user.info.stats,video.list',
     response_type: 'code',
     redirect_uri: redirectUri,
     state,
