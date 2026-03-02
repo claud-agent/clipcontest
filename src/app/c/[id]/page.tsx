@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import EntryForm from '@/components/contest/EntryForm'
+import Leaderboard from '@/components/contest/Leaderboard'
 
 export default async function PublicContestPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -158,6 +159,11 @@ export default async function PublicContestPage({ params }: { params: { id: stri
             hashtag={contest.participation_hashtag}
             tiktokConnected={tiktokConnected}
           />
+        </div>
+
+        {/* Leaderboard */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
+          <Leaderboard contestId={contest.id} />
         </div>
 
         {/* Rules / Terms */}

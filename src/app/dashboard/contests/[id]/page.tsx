@@ -4,6 +4,7 @@ import Link from 'next/link'
 import ContestActions from '@/components/dashboard/ContestActions'
 import CopyButton from '@/components/dashboard/CopyButton'
 import EntryCard from '@/components/dashboard/EntryCard'
+import Leaderboard from '@/components/contest/Leaderboard'
 
 const statusConfig = {
   draft: { label: 'Entwurf', color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20' },
@@ -129,6 +130,11 @@ export default async function ContestDetailPage({
             <p className="text-gray-300">{contest.update_frequency === 'hourly' ? 'Stündlich' : contest.update_frequency === 'every6hours' ? 'Alle 6 Stunden' : 'Täglich'}</p>
           </div>
         )}
+      </div>
+
+      {/* Leaderboard */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-5 mb-6">
+        <Leaderboard contestId={contest.id} />
       </div>
 
       {/* Entries */}
