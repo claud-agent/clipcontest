@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import Image from 'next/image'
+import VideoSelector from './VideoSelector'
 
 type Props = {
   contestId: string
@@ -12,6 +13,7 @@ type Props = {
   hasSubmitted: boolean
   user: User | null
   hashtag: string | null
+  tiktokConnected?: boolean
 }
 
 type Preview = {
@@ -31,9 +33,10 @@ function extractTikTokId(url: string): string | null {
   return match ? match[1] : null
 }
 
-export default function EntryForm({ contestId, isActive, hasSubmitted, user, hashtag }: Props) {
+export default function EntryForm({ contestId, isActive, hasSubmitted, user, hashtag, tiktokConnected }: Props) {
   const router = useRouter()
   const [url, setUrl] = useState('')
+  const [selectedVideoId, setSelectedVideoId] = useState<string | undefined>()
   const [isOwner, setIsOwner] = useState(false)
   const [preview, setPreview] = useState<Preview | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -159,6 +162,31 @@ export default function EntryForm({ contestId, isActive, hasSubmitted, user, has
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+
+      {/* TikTok Video Picker */}
+      {tiktokConnected && user && (
+        <div>
+          <VideoSelector
+            selectedId={selectedVideoId}
+            onSelect={(video) => {
+              setUrl(video.share_url)
+              setSelectedVideoId(video.id)
+              setPreview({
+                title: video.title,
+                author_name: null,
+                thumbnail_url: video.cover_image_url,
+              })
+              setPreviewError('')
+            }}
+          />
+          <div className="flex items-center gap-2 my-3">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-gray-500 text-xs">oder Link einfügen</span>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
+        </div>
+      )}
+
       {/* URL input */}
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-1.5">

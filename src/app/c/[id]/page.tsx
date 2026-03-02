@@ -17,6 +17,17 @@ export default async function PublicContestPage({ params }: { params: { id: stri
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Check TikTok connection
+  let tiktokConnected = false
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('tiktok_access_token')
+      .eq('id', user.id)
+      .single()
+    tiktokConnected = !!profile?.tiktok_access_token
+  }
+
   // Check if user already submitted
   let hasSubmitted = false
   if (user) {
@@ -145,6 +156,7 @@ export default async function PublicContestPage({ params }: { params: { id: stri
             hasSubmitted={hasSubmitted}
             user={user}
             hashtag={contest.participation_hashtag}
+            tiktokConnected={tiktokConnected}
           />
         </div>
 
