@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { computeScore, type Snapshot } from '@/lib/scoring/engine'
+import { computeScore, computeBaseScore, type Snapshot } from '@/lib/scoring/engine'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,6 +64,16 @@ export async function GET(
 
     // Compute live score from snapshots (0 score if no metrics yet)
     const scoreData = computeScore(snapshots)
+    const views    = latest?.view_count    ?? 0
+    const likes    = latest?.like_count    ?? 0
+    const comments = latest?.comment_count ?? 0
+    const shares   = latest?.share_count   ?? 0
+
+    // Also compute individual components for breakdown display
+    const { components } = computeBaseScore(views, likes, comments, shares)
+    const likeRate    = views > 0 ? likes    / views : 0
+    const commentRate = views > 0 ? comments / views : 0
+    const shareRate   = views > 0 ? shares   / views : 0
 
     return {
       id:            entry.id,
@@ -72,17 +82,21 @@ export async function GET(
       author_name:   entry.author_name,
       thumbnail_url: entry.thumbnail_url,
       submitted_at:  entry.submitted_at,
-      view_count:    latest?.view_count    ?? 0,
-      like_count:    latest?.like_count    ?? 0,
-      comment_count: latest?.comment_count ?? 0,
-      share_count:   latest?.share_count   ?? 0,
+      view_count:    views,
+      like_count:    likes,
+      comment_count: comments,
+      share_count:   shares,
+      like_rate:     Math.round(likeRate    * 10000) / 10000,
+      comment_rate:  Math.round(commentRate * 10000) / 10000,
+      share_rate:    Math.round(shareRate   * 10000) / 10000,
       base_score:    scoreData.base_score,
       final_score:   scoreData.final_score,
       penalty:       scoreData.penalty,
       flag_count:    scoreData.flag_count,
       under_review:  scoreData.under_review,
       flags:         scoreData.flags,
-      // Legacy compat fields
+      components,
+      snapshots_used: snapshots.length,
       score:         scoreData.final_score,
       growth:        0,
       anomaly:       scoreData.flag_count > 0,

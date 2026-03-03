@@ -18,6 +18,17 @@ type ClipEntry = {
   like_count: number
   comment_count: number
   share_count: number
+  like_rate: number
+  comment_rate: number
+  share_rate: number
+  base_score: number
+  final_score: number
+  penalty: number
+  flag_count: number
+  under_review: boolean
+  flags: { spike_ratio: boolean; decoupling: boolean; rate_jump: boolean }
+  components: { v: number; l: number; c: number; sh: number }
+  snapshots_used: number
   growth: number
   score: number
   anomaly: boolean
@@ -84,6 +95,164 @@ const RANK_BADGES: Record<number, { emoji: string; color: string }> = {
   2: { emoji: '🔥', color: 'text-orange-400' },
 }
 
+/* ───────── Score Modal ───────── */
+function ScoreModal({ entry, onClose }: { entry: ClipEntry; onClose: () => void }) {
+  const MIN_VIEWS = 5000
+  const hasMetrics = entry.snapshots_used > 0
+  const belowMin   = entry.view_count < MIN_VIEWS
+
+  const bars = [
+    { label: 'Views',        value: entry.components?.v  ?? 0, max: 2,  color: 'bg-blue-500'   },
+    { label: 'Like-Rate',    value: entry.components?.l  ?? 0, max: 2,  color: 'bg-green-500'  },
+    { label: 'Comment-Rate', value: entry.components?.c  ?? 0, max: 3,  color: 'bg-yellow-500' },
+    { label: 'Share-Rate',   value: entry.components?.sh ?? 0, max: 3,  color: 'bg-brand-500'  },
+  ]
+
+  const flags = [
+    { key: 'spike_ratio', label: 'View-Spike',    desc: 'Max/Median > 12x',             active: entry.flags?.spike_ratio },
+    { key: 'decoupling',  label: 'Entkopplung',   desc: 'Views ohne Engagement',        active: entry.flags?.decoupling  },
+    { key: 'rate_jump',   label: 'Rate-Sprung',   desc: '>3x Sprung + >50% Drop',       active: entry.flags?.rate_jump   },
+  ]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-0" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative bg-[#141518] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 z-10"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between mb-5">
+          <div className="flex-1 min-w-0 pr-3">
+            <h3 className="text-white font-bold text-sm truncate">{entry.video_title ?? 'TikTok Video'}</h3>
+            <p className="text-gray-500 text-xs mt-0.5">{entry.author_name ?? 'User'}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors flex-shrink-0">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Final Score */}
+        <div className="flex items-center justify-between mb-6 p-4 bg-white/[0.03] rounded-xl border border-white/[0.06]">
+          <div>
+            <p className="text-gray-500 text-xs">Final Score</p>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-4xl font-black text-white">{entry.final_score?.toFixed(2) ?? '—'}</span>
+              <span className="text-gray-500 text-sm">/ 10</span>
+            </div>
+            {entry.penalty < 0 && (
+              <p className="text-red-400 text-xs mt-1">Penalty: {entry.penalty} Punkte</p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-gray-500 text-xs">Base Score</p>
+            <p className="text-white text-xl font-bold">{entry.base_score?.toFixed(2) ?? '—'}</p>
+            {entry.under_review && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-400/10 text-red-400 border border-red-400/20 mt-1 inline-block">
+                Under Review
+              </span>
+            )}
+          </div>
+        </div>
+
+        {!hasMetrics ? (
+          <div className="text-center py-4">
+            <p className="text-gray-500 text-sm">Noch keine Metrics — klick auf "Metrics aktualisieren" im Admin Panel.</p>
+          </div>
+        ) : belowMin ? (
+          <div className="text-center py-4">
+            <p className="text-yellow-400 text-sm">Unter Mindest-Views ({entry.view_count.toLocaleString('de-DE')} / 5.000)</p>
+            <p className="text-gray-500 text-xs mt-1">Score wird erst ab 5.000 Views berechnet.</p>
+          </div>
+        ) : (
+          <>
+            {/* Score Breakdown */}
+            <div className="space-y-3 mb-5">
+              <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Score Breakdown</p>
+              {bars.map(bar => (
+                <div key={bar.label}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-gray-400 text-xs">{bar.label}</span>
+                    <span className="text-white text-xs font-bold tabular-nums">
+                      {bar.value.toFixed(2)} / {bar.max}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${bar.color} rounded-full transition-all`}
+                      style={{ width: `${(bar.value / bar.max) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-2 mb-5 text-center">
+              {[
+                { label: 'Like-Rate',    value: `${(entry.like_rate    * 100).toFixed(1)}%` },
+                { label: 'Comment-Rate', value: `${(entry.comment_rate * 100).toFixed(2)}%` },
+                { label: 'Share-Rate',   value: `${(entry.share_rate   * 100).toFixed(2)}%` },
+              ].map(s => (
+                <div key={s.label} className="bg-white/[0.03] rounded-lg p-2 border border-white/[0.04]">
+                  <p className="text-white text-sm font-bold">{s.value}</p>
+                  <p className="text-gray-600 text-[10px]">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Flags */}
+            <div className="space-y-2">
+              <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">
+                Flags ({entry.flag_count ?? 0} / 3)
+              </p>
+              {flags.map(f => (
+                <div key={f.key} className={`flex items-center gap-3 p-2.5 rounded-lg border ${
+                  f.active
+                    ? 'bg-red-400/[0.06] border-red-400/20'
+                    : 'bg-white/[0.02] border-white/[0.04]'
+                }`}>
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    f.active ? 'bg-red-400/20' : 'bg-green-400/10'
+                  }`}>
+                    {f.active
+                      ? <span className="text-red-400 text-xs">!</span>
+                      : <svg className="w-3 h-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-medium ${f.active ? 'text-red-400' : 'text-gray-400'}`}>{f.label}</p>
+                    <p className="text-gray-600 text-[10px]">{f.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-gray-600 text-[10px] text-center mt-4">
+              Basierend auf {entry.snapshots_used} Snapshots
+            </p>
+          </>
+        )}
+
+        {/* Open on TikTok */}
+        <a
+          href={entry.video_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] rounded-xl text-white text-sm font-medium transition-colors"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/>
+          </svg>
+          Auf TikTok öffnen
+        </a>
+      </div>
+    </div>
+  )
+}
+
 /* ───────── countdown hook ───────── */
 function useCountdown(endDate: string | null) {
   const [time, setTime] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, ended: false })
@@ -120,6 +289,7 @@ export default function ContestPageClient({ contest, creator, entryCount, user, 
   const [entries, setEntries] = useState<ClipEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [showEntry, setShowEntry] = useState(false)
+  const [selectedEntry, setSelectedEntry] = useState<ClipEntry | null>(null)
   const countdown = useCountdown(contest.end_date)
 
   const isActive = contest.status === 'active'
@@ -177,6 +347,10 @@ export default function ContestPageClient({ contest, creator, entryCount, user, 
 
   return (
     <div className="min-h-screen bg-[#0c0d0f]">
+      {/* Score Detail Modal */}
+      {selectedEntry && (
+        <ScoreModal entry={selectedEntry} onClose={() => setSelectedEntry(null)} />
+      )}
 
       {/* ═══ HEADER / BANNER ═══ */}
       <div className="relative">
@@ -391,12 +565,10 @@ export default function ContestPageClient({ contest, creator, entryCount, user, 
         ) : (
           <div className="space-y-1">
             {entries.map((entry, i) => (
-              <a
+              <div
                 key={entry.id}
-                href={entry.video_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex gap-4 p-3 rounded-xl transition-all hover:bg-white/[0.03] group"
+                onClick={() => setSelectedEntry(entry)}
+                className="flex gap-4 p-3 rounded-xl transition-all hover:bg-white/[0.03] group cursor-pointer"
               >
                 {/* Rank number */}
                 <div className="w-6 flex-shrink-0 flex items-center justify-center">
@@ -490,19 +662,30 @@ export default function ContestPageClient({ contest, creator, entryCount, user, 
                   )}
                 </div>
 
-                {/* Right: Primary metric */}
-                <div className="flex-shrink-0 text-right self-center">
-                  <p className="text-white text-sm font-bold tabular-nums">
-                    {formatCount(tab === 'hot' ? entry.score : entry.view_count)}
-                  </p>
-                  <p className="text-gray-600 text-[10px]">{tab === 'hot' ? 'Score' : 'Views'}</p>
-                  {entry.growth > 0 && (
-                    <p className="text-green-400 text-[10px] tabular-nums mt-0.5">
-                      +{formatCount(entry.growth)}
+                {/* Right: Score + Views */}
+                <div className="flex-shrink-0 text-right self-center space-y-1.5">
+                  {/* Score badge */}
+                  <div className={`px-2.5 py-1 rounded-lg text-center ${
+                    entry.final_score >= 7 ? 'bg-green-400/10 border border-green-400/20' :
+                    entry.final_score >= 4 ? 'bg-yellow-400/10 border border-yellow-400/20' :
+                    entry.final_score > 0  ? 'bg-white/[0.04] border border-white/[0.06]' :
+                    'bg-white/[0.02] border border-white/[0.04]'
+                  }`}>
+                    <p className={`text-sm font-black tabular-nums leading-none ${
+                      entry.final_score >= 7 ? 'text-green-400' :
+                      entry.final_score >= 4 ? 'text-yellow-400' :
+                      'text-gray-400'
+                    }`}>
+                      {entry.snapshots_used > 0 ? entry.final_score.toFixed(1) : '—'}
                     </p>
+                    <p className="text-gray-600 text-[9px] mt-0.5">Score</p>
+                  </div>
+                  <p className="text-gray-500 text-xs tabular-nums">{formatCount(entry.view_count)} Views</p>
+                  {entry.under_review && (
+                    <p className="text-red-400 text-[9px]">⚠ Review</p>
                   )}
                 </div>
-              </a>
+              </div>
             ))}
           </div>
         )}
