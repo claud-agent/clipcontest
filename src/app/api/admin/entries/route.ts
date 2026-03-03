@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Enrich with contest titles
-  const contestIds = [...new Set((data ?? []).map(e => e.contest_id))]
+  const contestIds = Array.from(new Set((data ?? []).map(e => e.contest_id)))
   const { data: contests } = await supabase
     .from('contests')
     .select('id, title')

@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Enrich with creator names + entry counts
-  const creatorIds = [...new Set((data ?? []).map(c => c.creator_id))]
+  const creatorIds = Array.from(new Set((data ?? []).map(c => c.creator_id)))
   const { data: creators } = await supabase
     .from('profiles')
     .select('id, full_name, email')
