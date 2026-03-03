@@ -10,7 +10,6 @@ export default async function PublicContestPage({ params }: { params: { id: stri
     .from('contests')
     .select('*')
     .eq('id', params.id)
-    .eq('is_public', true)
     .single()
 
   if (!contest) notFound()
