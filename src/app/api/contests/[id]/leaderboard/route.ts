@@ -13,7 +13,7 @@ export async function GET(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Fetch approved entries
+  // Fetch approved entries (score columns optional — may not exist yet)
   const { data: entries, error } = await supabase
     .from('entries')
     .select(`
@@ -23,12 +23,7 @@ export async function GET(
       author_name,
       thumbnail_url,
       platform_video_id,
-      submitted_at,
-      base_score,
-      final_score,
-      penalty,
-      flag_count,
-      under_review
+      submitted_at
     `)
     .eq('contest_id', params.id)
     .eq('status', 'approved')
@@ -67,21 +62,8 @@ export async function GET(
     const snapshots = snapshotsByEntry.get(entry.id) ?? []
     const latest = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null
 
-    // Compute live score from snapshots (or fall back to stored score)
-    let scoreData
-    if (snapshots.length > 0) {
-      scoreData = computeScore(snapshots)
-    } else {
-      scoreData = {
-        base_score:   entry.base_score  ?? 0,
-        final_score:  entry.final_score ?? 0,
-        penalty:      entry.penalty     ?? 0,
-        flag_count:   entry.flag_count  ?? 0,
-        under_review: entry.under_review ?? false,
-        flags: { spike_ratio: false, decoupling: false, rate_jump: false },
-        details: {},
-      }
-    }
+    // Compute live score from snapshots (0 score if no metrics yet)
+    const scoreData = computeScore(snapshots)
 
     return {
       id:            entry.id,
