@@ -15,8 +15,10 @@ export default async function DashboardLayout({
     redirect('/auth/login')
   }
 
-  // Check if user is admin
-  const { data: profile } = await supabase
+  // Check if user is admin (use service role to bypass RLS)
+  const { createServerSupabaseClient } = await import('@/lib/supabase')
+  const serviceClient = createServerSupabaseClient()
+  const { data: profile } = await serviceClient
     .from('profiles')
     .select('role')
     .eq('id', user.id)
