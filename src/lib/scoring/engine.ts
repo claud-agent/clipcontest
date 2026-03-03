@@ -9,7 +9,7 @@
 
 // ─── Constants ────────────────────────────────────────────────
 export const SCORING_CONFIG = {
-  MIN_VIEWS:     5_000,
+  MIN_VIEWS:       100,   // TODO: set back to 5_000 for production
   VIEWS_CAP:   200_000,
   LR_MAX:         0.12,   // max like rate
   CR_MAX:         0.02,   // max comment rate
