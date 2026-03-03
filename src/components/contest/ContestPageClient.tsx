@@ -97,9 +97,9 @@ const RANK_BADGES: Record<number, { emoji: string; color: string }> = {
 
 /* ───────── Score Modal ───────── */
 function ScoreModal({ entry, onClose }: { entry: ClipEntry; onClose: () => void }) {
-  const MIN_VIEWS = 5000
-  const hasMetrics = entry.snapshots_used > 0
-  const belowMin   = entry.view_count < MIN_VIEWS
+  const MIN_VIEWS = 100 // sandbox: 100, production: 5000
+  const hasMetrics = entry.snapshots_used > 0 || entry.final_score > 0
+  const belowMin   = entry.view_count > 0 && entry.view_count < MIN_VIEWS
 
   const bars = [
     { label: 'Views',        value: entry.components?.v  ?? 0, max: 2,  color: 'bg-blue-500'   },
@@ -163,8 +163,8 @@ function ScoreModal({ entry, onClose }: { entry: ClipEntry; onClose: () => void 
           </div>
         ) : belowMin ? (
           <div className="text-center py-4">
-            <p className="text-yellow-400 text-sm">Unter Mindest-Views ({entry.view_count.toLocaleString('de-DE')} / 5.000)</p>
-            <p className="text-gray-500 text-xs mt-1">Score wird erst ab 5.000 Views berechnet.</p>
+            <p className="text-yellow-400 text-sm">Unter Mindest-Views ({entry.view_count.toLocaleString('de-DE')} / {MIN_VIEWS.toLocaleString('de-DE')})</p>
+            <p className="text-gray-500 text-xs mt-1">Score wird erst ab {MIN_VIEWS.toLocaleString('de-DE')} Views berechnet.</p>
           </div>
         ) : (
           <>
