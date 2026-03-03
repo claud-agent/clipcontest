@@ -38,11 +38,30 @@ export async function GET(
 
   // Fetch all metric snapshots for live score computation
   const entryIds = entries.map(e => e.id)
-  const { data: metrics } = await supabase
+  const { data: metrics, error: metricsError } = await supabase
     .from('metrics')
     .select('entry_id, view_count, like_count, comment_count, share_count, fetched_at')
     .in('entry_id', entryIds)
     .order('fetched_at', { ascending: true })
+
+  if (metricsError) {
+    console.error('[leaderboard] metrics query failed:', metricsError.message, metricsError.details)
+    // Return entries with 0 scores but include error for debugging
+    return NextResponse.json({
+      entries: entries.map(e => ({
+        id: e.id, video_url: e.video_url, video_title: e.video_title,
+        author_name: e.author_name, thumbnail_url: e.thumbnail_url,
+        submitted_at: e.submitted_at, view_count: 0, like_count: 0,
+        comment_count: 0, share_count: 0, like_rate: 0, comment_rate: 0,
+        share_rate: 0, base_score: 0, final_score: 0, penalty: 0,
+        flag_count: 0, under_review: false, flags: { spike_ratio: false, decoupling: false, rate_jump: false },
+        components: { v: 0, l: 0, c: 0, sh: 0 }, snapshots_used: 0,
+        score: 0, growth: 0, anomaly: false, updatedAt: null,
+      })),
+      updatedAt: null,
+      _metricsError: metricsError.message,
+    })
+  }
 
   // Group snapshots by entry
   const snapshotsByEntry = new Map<string, Snapshot[]>()
@@ -113,5 +132,13 @@ export async function GET(
 
   const updatedAt = metrics?.length ? metrics[metrics.length - 1].fetched_at : null
 
-  return NextResponse.json({ entries: enriched, updatedAt })
+  return NextResponse.json({
+    entries: enriched,
+    updatedAt,
+    _debug: {
+      entryCount: entries.length,
+      metricsCount: metrics?.length ?? 0,
+      entryIds,
+    },
+  })
 }
