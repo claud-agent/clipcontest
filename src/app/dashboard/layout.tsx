@@ -15,6 +15,15 @@ export default async function DashboardLayout({
     redirect('/auth/login')
   }
 
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const isAdmin = profile?.role === 'admin'
+
   return (
     <div className="min-h-screen bg-[#0c0d0f] flex">
       {/* Sidebar */}
@@ -43,6 +52,18 @@ export default async function DashboardLayout({
             </svg>
             Neuer Contest
           </Link>
+
+          {isAdmin && (
+            <>
+              <div className="h-px bg-white/[0.04] my-3 mx-3" />
+              <Link href="/dashboard/admin" className="flex items-center gap-3 px-3 py-2 rounded-lg text-red-400/70 hover:text-red-400 hover:bg-red-400/[0.06] transition-all duration-200 text-[13px] font-medium">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+                Admin Panel
+              </Link>
+            </>
+          )}
         </nav>
 
         <DashboardNav user={user} />
