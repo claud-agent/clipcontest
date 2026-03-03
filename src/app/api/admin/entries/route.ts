@@ -8,7 +8,8 @@ async function checkAdmin() {
   const authClient = createClient()
   const { data: { user } } = await authClient.auth.getUser()
   if (!user) return null
-  const { data: profile } = await authClient
+  const serviceClient = createServerSupabaseClient()
+  const { data: profile } = await serviceClient
     .from('profiles')
     .select('role')
     .eq('id', user.id)
