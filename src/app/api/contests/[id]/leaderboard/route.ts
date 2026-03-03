@@ -139,6 +139,7 @@ export async function GET(
       entryCount: entries.length,
       metricsCount: metrics?.length ?? 0,
       entryIds,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'NOT SET',
     },
   })
 }
