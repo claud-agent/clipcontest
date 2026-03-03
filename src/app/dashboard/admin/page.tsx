@@ -58,6 +58,9 @@ export default function AdminOverview() {
   const [triggerResult, setTriggerResult] = useState<string | null>(null)
   const [seeding, setSeeding] = useState(false)
   const [seedResult, setSeedResult] = useState<{ url?: string; msg: string } | null>(null)
+  const [debugId, setDebugId] = useState('')
+  const [debugData, setDebugData] = useState<Record<string, unknown> | null>(null)
+  const [debugging, setDebugging] = useState(false)
 
   const seedTestData = async () => {
     setSeeding(true)
@@ -92,6 +95,20 @@ export default function AdminOverview() {
       setTriggerResult('Fehler beim Aufruf')
     } finally {
       setTriggering(false)
+    }
+  }
+
+  const runDebug = async () => {
+    if (!debugId.trim()) return
+    setDebugging(true)
+    setDebugData(null)
+    try {
+      const res = await fetch(`/api/admin/debug-contest?id=${debugId.trim()}`)
+      setDebugData(await res.json())
+    } catch {
+      setDebugData({ error: 'Fetch failed' })
+    } finally {
+      setDebugging(false)
     }
   }
 
@@ -247,6 +264,81 @@ export default function AdminOverview() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* ── Debug Panel ── */}
+      <div className="mt-8 bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-white mb-3">🔍 Contest Debug</h2>
+        <div className="flex gap-2 mb-3">
+          <input
+            type="text"
+            value={debugId}
+            onChange={e => setDebugId(e.target.value)}
+            placeholder="Contest-ID eingeben…"
+            className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-brand-500/50"
+          />
+          <button
+            onClick={runDebug}
+            disabled={debugging || !debugId.trim()}
+            className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-gray-300 text-sm rounded-lg transition-colors disabled:opacity-40"
+          >
+            {debugging ? 'Lädt…' : 'Debug'}
+          </button>
+        </div>
+        {debugData && (
+          <div className="space-y-3">
+            {/* Contest + token status */}
+            <div className="flex flex-wrap gap-3 text-xs">
+              <span className="px-2 py-1 rounded bg-white/5 text-gray-300">
+                Status: <strong>{(debugData.contest as Record<string,unknown>)?.status as string ?? '?'}</strong>
+              </span>
+              <span className={`px-2 py-1 rounded ${debugData.tiktok_token_present ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                TikTok-Token: {debugData.tiktok_token_present ? '✅ vorhanden' : '❌ fehlt / abgelaufen'}
+              </span>
+              <span className="px-2 py-1 rounded bg-white/5 text-gray-300">
+                @{debugData.tiktok_username as string ?? 'kein Account'}
+              </span>
+              <span className="px-2 py-1 rounded bg-white/5 text-gray-300">
+                Gesamt Metrics-Zeilen: <strong>{debugData.total_metrics_rows as number}</strong>
+              </span>
+            </div>
+            {/* Entries table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-gray-400">
+                <thead>
+                  <tr className="border-b border-white/5 text-gray-600">
+                    <th className="text-left py-1 pr-3">Entry ID</th>
+                    <th className="text-left py-1 pr-3">Status</th>
+                    <th className="text-left py-1 pr-3">platform_video_id</th>
+                    <th className="text-right py-1 pr-3">Metrics-Zeilen</th>
+                    <th className="text-right py-1 pr-3">Letzte Views</th>
+                    <th className="text-right py-1 pr-3">Score (DB)</th>
+                    <th className="text-left py-1">Score aktualisiert</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {((debugData.entries_summary as Record<string,unknown>[]) ?? []).map((e: Record<string,unknown>) => (
+                    <tr key={e.entry_id as string} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
+                      <td className="py-1 pr-3 font-mono text-[10px]">{(e.entry_id as string).slice(0, 8)}…</td>
+                      <td className="py-1 pr-3">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${e.status === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'}`}>
+                          {e.status as string}
+                        </span>
+                      </td>
+                      <td className="py-1 pr-3 font-mono text-[10px] text-gray-500">{e.platform_video_id as string ?? '—'}</td>
+                      <td className={`py-1 pr-3 text-right font-bold ${(e.metrics_count as number) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {e.metrics_count as number}
+                      </td>
+                      <td className="py-1 pr-3 text-right">{e.latest_views !== null ? (e.latest_views as number).toLocaleString('de-DE') : '—'}</td>
+                      <td className="py-1 pr-3 text-right text-brand-500">{e.db_final_score !== null ? (e.db_final_score as number).toFixed(1) : '—'}</td>
+                      <td className="py-1 text-gray-600">{e.score_updated_at ? new Date(e.score_updated_at as string).toLocaleString('de-DE') : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
