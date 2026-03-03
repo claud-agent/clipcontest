@@ -24,7 +24,8 @@ export async function GET(
       video_title,
       author_name,
       thumbnail_url,
-      platform_video_id
+      platform_video_id,
+      submitted_at
     `)
     .eq('contest_id', params.id)
     .eq('status', 'approved')
@@ -96,6 +97,7 @@ export async function GET(
       growth,
       score,
       anomaly,
+      submitted_at: entry.submitted_at ?? null,
       updatedAt: latest?.fetched_at ?? null,
     }
   })
