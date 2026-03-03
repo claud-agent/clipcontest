@@ -103,8 +103,13 @@ export default function AdminOverview() {
     setDebugging(true)
     setDebugData(null)
     try {
-      const res = await fetch(`/api/admin/debug-contest?id=${debugId.trim()}`)
-      setDebugData(await res.json())
+      // Fetch both the admin debug data AND the live leaderboard response in parallel
+      const [debugRes, lbRes] = await Promise.all([
+        fetch(`/api/admin/debug-contest?id=${debugId.trim()}`),
+        fetch(`/api/contests/${debugId.trim()}/leaderboard`),
+      ])
+      const [debug, lb] = await Promise.all([debugRes.json(), lbRes.json()])
+      setDebugData({ ...debug, _leaderboard: lb })
     } catch {
       setDebugData({ error: 'Fetch failed' })
     } finally {
@@ -286,7 +291,7 @@ export default function AdminOverview() {
           </button>
         </div>
         {debugData && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {/* Contest + token status */}
             <div className="flex flex-wrap gap-3 text-xs">
               <span className="px-2 py-1 rounded bg-white/5 text-gray-300">
@@ -302,41 +307,92 @@ export default function AdminOverview() {
                 Gesamt Metrics-Zeilen: <strong>{debugData.total_metrics_rows as number}</strong>
               </span>
             </div>
-            {/* Entries table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-gray-400">
-                <thead>
-                  <tr className="border-b border-white/5 text-gray-600">
-                    <th className="text-left py-1 pr-3">Entry ID</th>
-                    <th className="text-left py-1 pr-3">Status</th>
-                    <th className="text-left py-1 pr-3">platform_video_id</th>
-                    <th className="text-right py-1 pr-3">Metrics-Zeilen</th>
-                    <th className="text-right py-1 pr-3">Letzte Views</th>
-                    <th className="text-right py-1 pr-3">Score (DB)</th>
-                    <th className="text-left py-1">Score aktualisiert</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {((debugData.entries_summary as Record<string,unknown>[]) ?? []).map((e: Record<string,unknown>) => (
-                    <tr key={e.entry_id as string} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                      <td className="py-1 pr-3 font-mono text-[10px]">{(e.entry_id as string).slice(0, 8)}…</td>
-                      <td className="py-1 pr-3">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${e.status === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'}`}>
-                          {e.status as string}
-                        </span>
-                      </td>
-                      <td className="py-1 pr-3 font-mono text-[10px] text-gray-500">{e.platform_video_id as string ?? '—'}</td>
-                      <td className={`py-1 pr-3 text-right font-bold ${(e.metrics_count as number) > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {e.metrics_count as number}
-                      </td>
-                      <td className="py-1 pr-3 text-right">{e.latest_views !== null ? (e.latest_views as number).toLocaleString('de-DE') : '—'}</td>
-                      <td className="py-1 pr-3 text-right text-brand-500">{e.db_final_score !== null ? (e.db_final_score as number).toFixed(1) : '—'}</td>
-                      <td className="py-1 text-gray-600">{e.score_updated_at ? new Date(e.score_updated_at as string).toLocaleString('de-DE') : '—'}</td>
+
+            {/* DB state table */}
+            <div>
+              <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Datenbank (direkt)</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-gray-400">
+                  <thead>
+                    <tr className="border-b border-white/5 text-gray-600">
+                      <th className="text-left py-1 pr-3">Entry ID</th>
+                      <th className="text-left py-1 pr-3">Status</th>
+                      <th className="text-left py-1 pr-3">platform_video_id</th>
+                      <th className="text-right py-1 pr-3">Metrics-Zeilen</th>
+                      <th className="text-right py-1 pr-3">Letzte Views</th>
+                      <th className="text-right py-1 pr-3">Score (DB)</th>
+                      <th className="text-left py-1">Score aktualisiert</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {((debugData.entries_summary as Record<string,unknown>[]) ?? []).map((e: Record<string,unknown>) => (
+                      <tr key={e.entry_id as string} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
+                        <td className="py-1 pr-3 font-mono text-[10px]">{(e.entry_id as string).slice(0, 8)}…</td>
+                        <td className="py-1 pr-3">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] ${e.status === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'}`}>
+                            {e.status as string}
+                          </span>
+                        </td>
+                        <td className="py-1 pr-3 font-mono text-[10px] text-gray-500">{e.platform_video_id as string ?? '—'}</td>
+                        <td className={`py-1 pr-3 text-right font-bold ${(e.metrics_count as number) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {e.metrics_count as number}
+                        </td>
+                        <td className="py-1 pr-3 text-right">{e.latest_views !== null ? (e.latest_views as number).toLocaleString('de-DE') : '—'}</td>
+                        <td className="py-1 pr-3 text-right text-brand-500">{e.db_final_score !== null ? (e.db_final_score as number).toFixed(1) : '—'}</td>
+                        <td className="py-1 text-gray-600">{e.score_updated_at ? new Date(e.score_updated_at as string).toLocaleString('de-DE') : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+            {/* Leaderboard API response */}
+            {(() => {
+              const lb = debugData._leaderboard as { entries?: Record<string,unknown>[]; error?: string } | null
+              return (
+                <div>
+                  <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">
+                    Leaderboard API — {lb?.error ? <span className="text-red-400">❌ Fehler: {lb.error}</span> : `${lb?.entries?.length ?? 0} Einträge`}
+                  </p>
+                  {lb?.entries && lb.entries.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-gray-400">
+                        <thead>
+                          <tr className="border-b border-white/5 text-gray-600">
+                            <th className="text-left py-1 pr-3">Entry ID</th>
+                            <th className="text-right py-1 pr-3">Views (API)</th>
+                            <th className="text-right py-1 pr-3">Snapshots</th>
+                            <th className="text-right py-1 pr-3">final_score</th>
+                            <th className="text-right py-1 pr-3">base_score</th>
+                            <th className="text-right py-1 pr-3">Flags</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lb.entries.map((e: Record<string,unknown>) => (
+                            <tr key={e.id as string} className="border-b border-white/[0.03]">
+                              <td className="py-1 pr-3 font-mono text-[10px]">{(e.id as string).slice(0, 8)}…</td>
+                              <td className={`py-1 pr-3 text-right font-bold ${(e.view_count as number) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {(e.view_count as number).toLocaleString('de-DE')}
+                              </td>
+                              <td className={`py-1 pr-3 text-right ${(e.snapshots_used as number) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {e.snapshots_used as number}
+                              </td>
+                              <td className="py-1 pr-3 text-right text-brand-500">{(e.final_score as number).toFixed(2)}</td>
+                              <td className="py-1 pr-3 text-right">{(e.base_score as number).toFixed(2)}</td>
+                              <td className="py-1 text-right">{e.flag_count as number}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {lb?.entries?.length === 0 && (
+                    <p className="text-red-400 text-xs">⚠️ Leaderboard gibt 0 Einträge zurück — Entry nicht approved oder contest_id falsch?</p>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         )}
       </div>
