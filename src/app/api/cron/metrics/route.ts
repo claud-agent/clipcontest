@@ -4,6 +4,54 @@ import { computeScore, type Snapshot } from '@/lib/scoring/engine'
 
 export const dynamic = 'force-dynamic'
 
+// ── Refresh an expired TikTok access token ──────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function refreshTikTokToken(
+  supabase: any,
+  userId: string,
+  refreshToken: string
+): Promise<string | null> {
+  try {
+    const res = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_key:    process.env.TIKTOK_CLIENT_KEY!,
+        client_secret: process.env.TIKTOK_CLIENT_SECRET!,
+        grant_type:    'refresh_token',
+        refresh_token: refreshToken,
+      }),
+    })
+
+    if (!res.ok) {
+      console.warn('[metrics-cron] token refresh failed:', res.status)
+      return null
+    }
+
+    const data = await res.json()
+    if (data.error || !data.access_token) {
+      console.warn('[metrics-cron] token refresh error:', data.error)
+      return null
+    }
+
+    // Persist new tokens to DB (cast needed: new columns not in generated types yet)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('profiles').update({
+      tiktok_access_token:    data.access_token,
+      tiktok_refresh_token:   data.refresh_token ?? refreshToken,
+      tiktok_token_expires_at: data.expires_in
+        ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+        : null,
+    }).eq('id', userId)
+
+    console.log('[metrics-cron] token refreshed for user', userId)
+    return data.access_token
+  } catch (err) {
+    console.error('[metrics-cron] token refresh exception:', err)
+    return null
+  }
+}
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -24,7 +72,7 @@ export async function GET(request: NextRequest) {
       user_id,
       contest_id,
       contests!inner(status),
-      profiles!inner(tiktok_access_token)
+      profiles!inner(tiktok_access_token, tiktok_refresh_token)
     `)
     .eq('status', 'approved')
     .eq('contests.status', 'active')
@@ -58,17 +106,42 @@ export async function GET(request: NextRequest) {
       .filter((id): id is string => !!id)
 
     try {
-      const res = await fetch(
+      let activeToken = token
+      let res = await fetch(
         'https://open.tiktokapis.com/v2/video/query/?fields=id,view_count,like_count,comment_count,share_count',
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${activeToken}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ filters: { video_ids: videoIds } }),
         }
       )
+
+      // ── Auto-refresh on 401 ──────────────────────────────────
+      if (res.status === 401) {
+        const userId = userEntries[0].user_id
+        const refreshToken = (userEntries[0].profiles as any)?.tiktok_refresh_token
+
+        if (refreshToken && userId) {
+          const newToken = await refreshTikTokToken(supabase, userId, refreshToken)
+          if (newToken) {
+            activeToken = newToken
+            res = await fetch(
+              'https://open.tiktokapis.com/v2/video/query/?fields=id,view_count,like_count,comment_count,share_count',
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${activeToken}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ filters: { video_ids: videoIds } }),
+              }
+            )
+          }
+        }
+      }
 
       if (!res.ok) {
         console.warn(`[metrics-cron] TikTok API error ${res.status}`)

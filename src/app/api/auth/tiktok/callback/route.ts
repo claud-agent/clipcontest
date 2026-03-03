@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/auth/login?error=token_exchange`)
     }
 
-    const { access_token, open_id, scope } = tokenData
+    const { access_token, refresh_token, expires_in, open_id, scope } = tokenData
 
     // Fetch TikTok user info
     const userRes = await fetch(
@@ -67,6 +67,10 @@ export async function GET(request: NextRequest) {
         tiktok_avatar: tiktokUser?.avatar_url ?? null,
         tiktok_access_token: access_token,
         tiktok_scope: scope,
+        tiktok_refresh_token: refresh_token ?? null,
+        tiktok_token_expires_at: expires_in
+          ? new Date(Date.now() + expires_in * 1000).toISOString()
+          : null,
       }).eq('id', user.id)
     }
 
