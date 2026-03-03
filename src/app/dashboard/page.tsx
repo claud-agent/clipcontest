@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import ContestCard from '@/components/dashboard/ContestCard'
 import TikTokConnect from '@/components/dashboard/TikTokConnect'
@@ -6,6 +7,16 @@ import TikTokConnect from '@/components/dashboard/TikTokConnect'
 export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  // First-time user detection: redirect to wizard if no contests yet
+  const { count } = await supabase
+    .from('contests')
+    .select('*', { count: 'exact', head: true })
+    .eq('creator_id', user!.id)
+
+  if (count === 0) {
+    redirect('/dashboard/contests/new')
+  }
 
   const { data: profile } = await supabase
     .from('profiles')
