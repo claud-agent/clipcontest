@@ -109,7 +109,8 @@ export default function LoginPage() {
 
               {tab === 'password' ? (
                 <>
-                  <div className="flex gap-4 mb-5">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex gap-4">
                     <button
                       onClick={() => { setMode('login'); setError('') }}
                       className={`text-[13px] font-semibold pb-1 border-b-2 transition-all duration-200 ${
@@ -126,6 +127,12 @@ export default function LoginPage() {
                     >
                       Registrieren
                     </button>
+                    </div>
+                    {mode === 'login' && (
+                      <Link href="/auth/forgot-password" className="text-[13px] text-brand-400 hover:text-brand-300 transition-colors duration-200">
+                        Vergessen?
+                      </Link>
+                    )}
                   </div>
 
                   <form onSubmit={handlePassword} className="space-y-4">
